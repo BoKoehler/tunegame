@@ -1,0 +1,20 @@
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message + '\n' + e.stack));
+  await page.goto('file://' + path.resolve('game.html'));
+  await page.click('#btn-demo');
+  await page.waitForFunction(() => window.__echoform.G.state === 'ready', null, { timeout: 90000 });
+  await page.evaluate(() => { window.__echoform.settings.noFail = true; });
+  await page.keyboard.press('Space');
+  const g0 = await page.evaluate(() => window.__echoform.G.song.analysis.gaps[0]);
+  await page.waitForFunction((t) => window.__echoform.G.vt > t, g0.t0 + 0.2, { timeout: 60000 });
+  console.log('in gap:', JSON.stringify(await page.evaluate(() => ({ t: window.__echoform.G.vt, hush: +window.__echoform.FX.hush.toFixed(2), target: window.__echoform.FX.hushTarget }))));
+  await page.screenshot({ path: 'shots/43-hush.png' });
+  await page.waitForFunction((t) => window.__echoform.G.vt > t, g0.t1 + 0.6, { timeout: 60000 });
+  console.log('after gap:', JSON.stringify(await page.evaluate(() => ({ t: window.__echoform.G.vt, hush: +window.__echoform.FX.hush.toFixed(2), sec: window.__echoform.FX.world.cur.name }))));
+  console.log('ERRORS', errors.length ? errors.join('\n') : 'none');
+  await browser.close();
+})();

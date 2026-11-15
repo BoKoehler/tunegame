@@ -1,0 +1,38 @@
+const { chromium, devices } = require('playwright');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('file://' + path.resolve('game.html'));
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: 'mshots/m1-title.png' });
+  const ov = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, scr: document.querySelector('#scr-title').scrollHeight }));
+  console.log('overflow check', JSON.stringify(ov));
+  await page.tap('#btn-demo');
+  await page.waitForFunction(() => window.__echoform.G.state === 'ready', null, { timeout: 90000 });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'mshots/m2-ready.png' });
+  await page.tap('#btn-start');
+  await page.waitForFunction(() => window.__echoform.G.vt > 4.2, null, { timeout: 30000 });
+  // tap a few lanes via touch at quadrant positions
+  const geo = await page.evaluate(() => ({ cx: innerWidth / 2, cy: innerHeight / 2 }));
+  await page.touchscreen.tap(geo.cx, geo.cy - 150);
+  await page.touchscreen.tap(geo.cx, geo.cy);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'mshots/m3-play.png' });
+  await page.tap('#hud-pause');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'mshots/m4-pause.png' });
+  await page.tap('#btn-resume');
+  await page.waitForTimeout(1800);
+  const st = await page.evaluate(() => ({ s: window.__echoform.G.state, ctx: window.__echoform.audio.ctx.state, t: window.__echoform.G.vt }));
+  console.log('after resume', JSON.stringify(st));
+  await page.evaluate(() => window.__echoform.finish(false));
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: 'mshots/m5-results.png', fullPage: false });
+  console.log('ERRORS', errors.length ? errors.join('\n') : 'none');
+  await browser.close();
+})();

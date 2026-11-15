@@ -1,0 +1,7 @@
+node_modules/
+tests/game.html
+tests/*.wav
+tests/*.mp3
+tests/shots/
+tests/mshots/
+tests/fshots/
